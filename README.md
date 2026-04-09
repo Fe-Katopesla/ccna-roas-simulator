@@ -5,7 +5,7 @@
 [![CSS3](https://img.shields.io/badge/CSS3-1572B6?style=for-the-badge&logo=css3&logoColor=white)]()
 [![JavaScript](https://img.shields.io/badge/JavaScript-323330?style=for-the-badge&logo=javascript&logoColor=F7DF1E)]()
 
-This project is an interactive Network Simulator focused on demonstrating **Inter-VLAN Routing** using the **Router-on-a-Stick (RoaS)** topology. It was developed as a hands-on study tool for the **Cisco CCNA (200-301)** certification, visually explaining how Layer 2 and Layer 3 devices collaborate to route traffic between isolated broadcast domains.
+This project is an interactive Network Simulator focused on demonstrating **Inter-VLAN Routing** using the **Router-on-a-Stick (RoaS)** topology. It was developed as a hands-on study tool for the **Cisco CCNA (200-125)** certification, visually explaining how Layer 2 and Layer 3 devices collaborate to route traffic between isolated broadcast domains.
 
 ---
 
