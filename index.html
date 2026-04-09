@@ -1,0 +1,289 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Router-on-a-Stick Inter-VLAN Routing Simulator</title>
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&family=Fira+Code:wght@400;500&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        :root {
+            --bg-color: #000000;
+            --card-bg: #050505;
+            --border: #1a1a1a;
+            --terminal-bg: #000000;
+            --text-color: #a0a0a0;
+            --neon-primary: #00ff41;
+            --neon-secondary: #008f11;
+            --danger: #ff0000;
+            --vlan10: #00ff41;
+            --vlan20: #ccff00;
+        }
+
+        body { font-family: 'Roboto', sans-serif; background-color: var(--bg-color); margin: 0; padding: 20px; color: var(--text-color); }
+        .container { max-width: 1200px; margin: 0 auto; display: flex; flex-direction: column; gap: 20px; }
+
+        .header { background: var(--card-bg); color: white; padding: 20px; border-radius: 10px; text-align: center; border: 1px solid var(--neon-secondary); box-shadow: 0 0 15px rgba(0, 255, 65, 0.15); }
+        .header h2 { margin: 0; font-size: 24px; font-weight: 700; color: var(--neon-primary); text-shadow: 0 0 5px var(--neon-primary), 0 0 10px var(--neon-secondary); }
+        .header p { margin: 5px 0 0; opacity: 0.8; font-size: 14px; }
+
+        .main-layout { display: flex; gap: 20px; flex-wrap: wrap; }
+        .network-area { flex: 2; position: relative; min-height: 550px; background-color: #000; background-image: radial-gradient(circle, #111 20%, transparent 20%); background-size: 20px 20px; display: flex; align-items: center; justify-content: center; border-radius: 10px; border: 1px solid var(--border); box-shadow: inset 0 0 30px rgba(0,0,0,0.8); overflow: hidden; }
+        
+        .cables line { stroke: #222; stroke-width: 2; stroke-dasharray: 4, 4; }
+        .cables .trunk-line { stroke: var(--neon-primary); stroke-width: 4; stroke-dasharray: 8, 4; opacity: 0.6; }
+        .cables { position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 1; pointer-events: none; }
+
+        .node { position: absolute; display: flex; flex-direction: column; align-items: center; font-size: 12px; font-weight: 500; z-index: 10; transition: all 0.3s ease; }
+        .icon { width: 50px; height: 50px; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 24px; margin-bottom: 5px; border: 2px solid #333; background: #000; color: white; transition: all 0.3s ease; box-shadow: 0 4px 6px rgba(0,0,0,0.5); }
+        .node span { background: rgba(0,0,0,0.8); padding: 4px 8px; border-radius: 4px; border: 1px solid #222; text-align: center; color: #aaa; }
+        .port-label { font-family: 'Fira Code', monospace; font-size: 10px; color: #666; }
+        
+        #r1 { top: 50px; left: 50%; transform: translateX(-50%); }
+        #r1 .icon { background: #050505; color: var(--neon-primary); border-color: var(--neon-secondary); width: 70px; height: 70px; font-size: 32px; box-shadow: 0 0 15px rgba(0, 255, 65, 0.3); }
+
+        #sw1 { top: 50%; left: 50%; transform: translate(-50%, -50%); }
+        #sw1 .icon { background: #050505; color: var(--neon-primary); border-color: var(--neon-secondary); width: 65px; height: 65px; font-size: 30px; box-shadow: 0 0 12px rgba(0, 255, 65, 0.2); }
+
+        #pc1 { bottom: 100px; left: 10%; }
+        #pc2 { bottom: 50px; left: 50%; transform: translateX(-50%); }
+        #pc3 { bottom: 100px; right: 10%; }
+
+        .vlan-10 .icon { border-color: var(--vlan10); color: var(--vlan10); box-shadow: 0 0 10px var(--vlan10); }
+        .vlan-20 .icon { border-color: var(--vlan20); color: var(--vlan20); box-shadow: 0 0 10px var(--vlan20); }
+        
+        .vlan-badge { display: block; font-family: 'Fira Code', monospace; font-size: 11px; font-weight: bold; margin-top: 3px; text-shadow: 0 0 3px currentColor;}
+        .vlan-10 .vlan-badge { color: var(--vlan10); }
+        .vlan-20 .vlan-badge { color: var(--vlan20); }
+
+        .packet { position: absolute; width: 22px; height: 22px; border-radius: 50%; opacity: 0; transition: all 0.8s cubic-bezier(0.25, 0.8, 0.25, 1); z-index: 20; display: flex; align-items: center; justify-content: center; color: #000; font-size: 11px; box-shadow: 0 0 15px currentColor; }
+        
+        .q-tag { position: absolute; top: -25px; left: 50%; transform: translateX(-50%); background: transparent; color: transparent; font-family: 'Fira Code', monospace; font-size: 10px; font-weight: bold; padding: 2px 6px; border-radius: 4px; transition: all 0.3s; border: 1px solid transparent; white-space: nowrap; }
+        .q-tag.active { background: #000; color: var(--neon-primary); border-color: var(--neon-primary); box-shadow: 0 0 8px var(--neon-primary); }
+
+        .sidebar { flex: 1; min-width: 300px; display: flex; flex-direction: column; gap: 20px; }
+        .panel { background: var(--card-bg); padding: 20px; border-radius: 10px; border: 1px solid var(--border); box-shadow: 0 4px 10px rgba(0,0,0,0.5); }
+        .panel h3 { color: var(--neon-primary); margin-top: 0; border-bottom: 1px solid #1a1a1a; padding-bottom: 10px; text-shadow: 0 0 2px var(--neon-primary); }
+        
+        .control-group { margin-bottom: 15px; }
+        label { display: block; font-size: 13px; font-weight: bold; margin-bottom: 5px; color: #888; }
+        select, button { width: 100%; padding: 10px; border-radius: 6px; border: 1px solid #222; font-family: inherit; font-size: 14px; box-sizing: border-box; background: #000; color: #aaa; outline: none; }
+        select { cursor: pointer; color: #ccc; }
+        select:focus { border-color: var(--neon-primary); }
+        button { background: transparent; color: var(--neon-primary); border: 1px solid var(--neon-primary); cursor: pointer; font-weight: bold; margin-top: 10px; transition: 0.3s; display: flex; justify-content: center; align-items: center; gap: 8px; box-shadow: inset 0 0 5px rgba(0, 255, 65, 0.1); }
+        button:hover { background: var(--neon-primary); color: #000; box-shadow: 0 0 15px var(--neon-primary); }
+        button:disabled { opacity: 0.5; cursor: not-allowed; }
+
+        .log-box { flex-grow: 1; background: var(--terminal-bg); color: #808080; font-family: 'Fira Code', monospace; padding: 15px; font-size: 12px; border-radius: 6px; overflow-y: auto; height: 280px; border: 1px solid #1a1a1a; box-shadow: inset 0 0 10px rgba(0,0,0,0.5); }
+        .log-box p { margin: 5px 0; line-height: 1.4; }
+        .log-info { color: #888; }
+        .log-untagged { color: #ccc; }
+        .log-tagged { color: var(--neon-primary); text-shadow: 0 0 3px var(--neon-primary); }
+        .log-error { color: var(--danger); text-shadow: 0 0 2px var(--danger); }
+        .log-box::-webkit-scrollbar { width: 6px; }
+        .log-box::-webkit-scrollbar-track { background: #000; }
+        .log-box::-webkit-scrollbar-thumb { background: #222; border-radius: 3px; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <div class="header">
+        <h2><i class="fa-solid fa-code-branch"></i> Router-on-a-Stick Simulator</h2>
+        <p>Layer 3 Rounting between VLANs via 802.1Q Trunk</p>
+    </div>
+
+    <div class="main-layout">
+        <div class="panel network-area" id="network">
+            <svg class="cables">
+                <line x1="12%" y1="82%" x2="50%" y2="50%" />
+                <line x1="50%" y1="91%" x2="50%" y2="50%" />
+                <line x1="88%" y1="82%" x2="50%" y2="50%" />
+                <line x1="50%" y1="50%" x2="50%" y2="13%" class="trunk-line" />
+            </svg>
+
+            <div class="node" id="r1">
+                <div class="icon"><i class="fa-solid fa-route"></i></div>
+                <span>Router 1<br><div class="port-label">Gi0/0 (RoaS)</div></span>
+            </div>
+            <div class="node" id="sw1">
+                <div class="icon"><i class="fa-solid fa-server"></i></div>
+                <span>Switch 1<br><div class="port-label">Gi0/1 (Trunk)</div></span>
+            </div>
+        </div>
+
+        <div class="sidebar">
+            <div class="panel">
+                <h3><i class="fa-solid fa-paper-plane"></i> Transmit Packet</h3>
+                <div class="control-group">
+                    <label>Source (Sender):</label>
+                    <select id="sender-select">
+                        <option value="1">PC 1 (VLAN 10, .10.10)</option>
+                        <option value="2">PC 2 (VLAN 20, .20.20)</option>
+                        <option value="3">PC 3 (VLAN 10, .10.11)</option>
+                    </select>
+                </div>
+                <div class="control-group">
+                    <label>Destination (Receiver):</label>
+                    <select id="receiver-select">
+                        <option value="2">PC 2 (VLAN 20, .20.20)</option>
+                        <option value="1">PC 1 (VLAN 10, .10.10)</option>
+                        <option value="3">PC 3 (VLAN 10, .10.11)</option>
+                    </select>
+                </div>
+                <button id="send-btn" onclick="sendPacket()"><i class="fa-solid fa-satellite-dish"></i> Execute Ping</button>
+            </div>
+
+            <div class="panel" style="flex-grow: 1; display: flex; flex-direction: column;">
+                <h3><i class="fa-solid fa-terminal"></i> Traffic Console</h3>
+                <div class="log-box" id="log-box"></div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    const networkData = {
+        vlanData: {
+            '10': { name: 'VLAN 10 (Sales)', color: '#00ff41', subnet: '10.0.10.0/24', gateway: '10.0.10.1' },
+            '20': { name: 'VLAN 20 (Eng)', color: '#ccff00', subnet: '10.0.20.0/24', gateway: '10.0.20.1' }
+        },
+        pcs: [
+            { id: 1, name: 'PC 1', ip: '10.0.10.10', vlan: '10', port: 'Fa0/1' },
+            { id: 2, name: 'PC 2', ip: '10.0.20.20', vlan: '20', port: 'Fa0/2' },
+            { id: 3, name: 'PC 3', ip: '10.0.10.11', vlan: '10', port: 'Fa0/3' }
+        ]
+    };
+
+    let isAnimating = false;
+
+    function log(msg, type = 'log-info') {
+        const box = document.getElementById('log-box');
+        box.innerHTML += `<p class="${type}">> ${msg}</p>`;
+        box.scrollTop = box.scrollHeight;
+    }
+
+    function initUI() {
+        const network = document.getElementById('network');
+        networkData.pcs.forEach(pc => {
+            const pcDiv = document.createElement('div');
+            pcDiv.className = `node vlan-${pc.vlan}`;
+            pcDiv.id = `pc${pc.id}`;
+            pcDiv.innerHTML = `
+                <div class="icon"><i class="fa-solid fa-desktop"></i></div>
+                <span>${pc.name}<br><div class="port-label">Access ${pc.port}</div><div class="vlan-badge">${networkData.vlanData[pc.vlan].subnet}</div></span>
+            `;
+            network.appendChild(pcDiv);
+            pc.el = pcDiv;
+        });
+        log("Topology initialized. R1 subinterfaces configured.", "log-untagged");
+    }
+
+    async function sendPacket() {
+        if (isAnimating) return;
+        
+        const senderId = parseInt(document.getElementById('sender-select').value);
+        const receiverId = parseInt(document.getElementById('receiver-select').value);
+        const btn = document.getElementById('send-btn');
+
+        if (senderId === receiverId) {
+            log("Error: Source and Destination cannot be the same.", "log-error");
+            return;
+        }
+
+        isAnimating = true;
+        btn.disabled = true;
+        
+        const sender = networkData.pcs.find(p => p.id === senderId);
+        const receiver = networkData.pcs.find(p => p.id === receiverId);
+        const sw1El = document.getElementById('sw1');
+        const r1El = document.getElementById('r1');
+        const sVlan = networkData.vlanData[sender.vlan];
+        const rVlan = networkData.vlanData[receiver.vlan];
+
+        log(`\n--- PING INIT: ${sender.ip} -> ${receiver.ip} ---`, "log-untagged");
+
+        if (sender.vlan === receiver.vlan) {
+            log(`[L2] L2switching. Dest ${receiver.ip} in same VLAN ${sender.vlan}.`, "log-info");
+            log(`[Host] Egress ${sender.name} untagged.`, "log-untagged");
+            await animateSegment(sender.el, sw1El, false);
+            log(`[Switch] Local switching. Flooding/Forwarding untagged.`, "log-info");
+            await animateSegment(sw1El, receiver.el, false);
+            log(`[Host] Ingress ${receiver.name} untagged.`, "log-untagged");
+        } else {
+            log(`[L3] Inter-VLAN routing. Dest ${receiver.ip} in diff subnet. ARP for Gateway ${sVlan.gateway}.`, "log-tagged");
+            log(`[Host] Egress ${sender.name} untagged to Gateway.`, "log-untagged");
+            await animateSegment(sender.el, sw1El, false);
+
+            log(`[Switch] Forwarding to Trunk Gi0/1. Tagging VLAN ${sender.vlan}.`, "log-info");
+            await animateSegment(sw1El, r1El, true, sVlan);
+
+            log(`[Router] Ingress Gi0/0.${sender.vlan}. L3 Routing to ${rVlan.subnet}.`, "log-tagged");
+            log(`[Router] Egress Gi0/0.${receiver.vlan}. Tagging VLAN ${receiver.vlan}.`, "log-tagged");
+            await animateSegment(r1El, sw1El, true, rVlan);
+
+            log(`[Switch] Ingress Trunk Gi0/1. Untagging VLAN ${receiver.vlan}. Forwarding to Fa0/${receiver.id}.`, "log-info");
+            await animateSegment(sw1El, receiver.el, false);
+            log(`[Host] Ingress ${receiver.name} untagged.`, "log-untagged");
+        }
+
+        log(`--- PING COMPLETE ---`, "log-untagged");
+        isAnimating = false;
+        btn.disabled = false;
+    }
+
+    function animateSegment(startEl, endEl, showTag, vlanInfo) {
+        return new Promise(resolve => {
+            const network = document.getElementById('network');
+            const packet = document.createElement('div');
+            packet.className = 'packet';
+            packet.innerHTML = `<i class="fa-solid fa-envelope"></i>`;
+            
+            if (showTag && vlanInfo) {
+                const tag = document.createElement('div');
+                tag.className = 'q-tag active';
+                tag.innerText = `802.1Q Tag: ${vlanInfo.name}`;
+                tag.style.borderColor = vlanInfo.color;
+                tag.style.color = vlanInfo.color;
+                tag.style.boxShadow = `0 0 8px ${vlanInfo.color}`;
+                packet.appendChild(tag);
+                packet.style.color = vlanInfo.color;
+                packet.style.backgroundColor = '#000';
+            } else {
+                packet.style.backgroundColor = '#fff';
+                packet.style.color = '#000';
+            }
+            
+            network.appendChild(packet);
+
+            const startRect = startEl.getBoundingClientRect();
+            const endRect = endEl.getBoundingClientRect();
+            const netRect = network.getBoundingClientRect();
+
+            const startX = startRect.left - netRect.left + (startRect.width / 2) - 11;
+            const startY = startRect.top - netRect.top + (startRect.height / 2) - 11;
+            const endX = endRect.left - netRect.left + (endRect.width / 2) - 11;
+            const endY = endRect.top - netRect.top + (endRect.height / 2) - 11;
+
+            packet.style.left = `${startX}px`;
+            packet.style.top = `${startY}px`;
+            
+            packet.getBoundingClientRect(); 
+
+            packet.style.opacity = '1';
+            packet.style.left = `${endX}px`;
+            packet.style.top = `${endY}px`;
+
+            setTimeout(() => {
+                packet.style.opacity = '0';
+                setTimeout(() => packet.remove(), 300);
+                resolve();
+            }, 800);
+        });
+    }
+
+    window.onload = initUI;
+</script>
+
+</body>
+</html>
