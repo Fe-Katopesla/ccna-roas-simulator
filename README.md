@@ -1,8 +1,5 @@
 # CCNA Layer 3 Router-on-a-Stick Simulator
 
-![Project Preview](https://via.placeholder.com/1000x400/000000/00ff41?text=Router-on-a-Stick+Simulator+-+Preview)
-> *Tip: Replace the image above with a real screenshot of your simulator running!*
-
 [![Live Demo](https://img.shields.io/badge/Live-Demo-00ff41?style=for-the-badge&logo=github&logoColor=black)](https://fe-katopesla.github.io/ccna-roas-simulator/)
 [![HTML5](https://img.shields.io/badge/HTML5-E34F26?style=for-the-badge&logo=html5&logoColor=white)]()
 [![CSS3](https://img.shields.io/badge/CSS3-1572B6?style=for-the-badge&logo=css3&logoColor=white)]()
